@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser
 
 
@@ -11,6 +12,8 @@ class User(AbstractBaseUser):
 
     is_active = models.BooleanField(default=False)
     is_admin = models.BooleanField(default=False)
+
+    language = models.CharField(max_length=10, choices=settings.LANGUAGES)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['email', 'full_name']
