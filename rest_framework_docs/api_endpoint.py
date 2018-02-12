@@ -8,6 +8,7 @@ from django.utils.encoding import force_str, force_text
 from django.utils.functional import Promise
 
 from rest_framework.serializers import BaseSerializer
+from rest_framework.serializers import PrimaryKeyRelatedField
 
 VIEWSET_METHODS = {
     'List': ['get', 'post'],
@@ -133,11 +134,31 @@ class ApiEndpoint(object):
                     "required": field.required,
                     "to_many_relation": to_many_relation,
                     "help_text": field.help_text or '',
+                    "choices": self.__get_field_choices(field),
                 })
             # FIXME:
             # Show more attibutes of `field`?
 
         return fields
+
+    def __get_field_choices(self, field):
+        """If it's a related field returns an one element list with the
+        related model. If the field has choices returns the
+        choices. Else returns `None`
+
+        """
+        if isinstance(field, PrimaryKeyRelatedField):
+            return ['Related field ' + str(field.queryset.model)]
+
+        if hasattr(field, 'choices'):
+            # Force choice keys to be a string or `json.dumps` fails
+            # This happens when using django-timezone-field where
+            # choices are a <pytz.timezone> object.
+            if isinstance(field.choices, dict):
+                if not all(map(lambda x: isinstance(x, str), field.choices.keys())):
+                    choices = dict([(str(key), field.choices[key]) for key in field.choices.keys()])
+                    return choices
+            return field.choices
 
     def __get_serializer_fields_json__(self):
         # FIXME:
