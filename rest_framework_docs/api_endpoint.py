@@ -41,6 +41,8 @@ class ApiEndpoint(object):
             self.serializer = self.__get_serializer__()
             self.fields = self.__get_serializer_fields__(self.serializer)
             self.fields_json = self.__get_serializer_fields_json__()
+            self.read_only_fields = self.__get_serializer_read_only_fields__()
+            self.write_only_fields = self.__get_serializer_write_only_fields__()
 
         self.permissions = self.__get_permissions_class__()
 
@@ -164,3 +166,21 @@ class ApiEndpoint(object):
         # FIXME:
         # Return JSON or not?
         return json.dumps(self.fields, cls=LazyEncoder)
+
+    def __get_serializer_read_only_fields__(self):
+        fields = []
+        meta = getattr(self.serializer, 'Meta', None)
+
+        if meta:
+            fields = getattr(meta, 'read_only_fields', None)
+            return fields
+
+    def __get_serializer_write_only_fields__(self):
+        fields = []
+        meta = getattr(self.serializer, 'Meta', None)
+
+        if meta:
+            for key, value in getattr(meta, 'extra_kwargs', {}).items():
+                if 'write_only' in value:
+                    fields.append(key)
+            return fields
