@@ -10,6 +10,10 @@ from django.utils.functional import Promise
 from rest_framework.serializers import BaseSerializer
 from rest_framework.serializers import PrimaryKeyRelatedField
 
+from django.utils.safestring import mark_safe
+from docutils import core
+
+
 VIEWSET_METHODS = {
     'List': ['get', 'post'],
     'Instance': ['get', 'put', 'patch', 'delete'],
@@ -25,10 +29,11 @@ class LazyEncoder(DjangoJSONEncoder):
 
 class ApiEndpoint(object):
 
-    def __init__(self, pattern, parent_regex=None, drf_router=None):
+    def __init__(self, pattern, parent_regex=None, drf_router=None, docstring_format=None):
         self.drf_router = drf_router
         self.pattern = pattern
         self.callback = pattern.callback
+        self.docstring_format = docstring_format
         # self.name = pattern.name
         self.docstring = self.__get_docstring__()
         self.name_parent = simplify_regex(parent_regex).strip('/') if parent_regex else None
@@ -97,7 +102,12 @@ class ApiEndpoint(object):
         return sorted(viewset_methods + view_methods)
 
     def __get_docstring__(self):
-        return inspect.getdoc(self.callback)
+        description = inspect.getdoc(self.callback)
+        if (self.docstring_format == "rst"):  # reStructuredText
+            parts = core.publish_parts(source=description, writer_name="html")
+            html = parts["body_pre_docinfo"] + parts["fragment"]
+            description = mark_safe(html)
+        return description
 
     def __get_permissions_class__(self):
         for perm_class in self.pattern.callback.cls.permission_classes:
